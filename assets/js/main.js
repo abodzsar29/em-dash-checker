@@ -1,34 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
-  const sliderGroups = document.querySelectorAll('.slider-group');
-
-  sliderGroups.forEach(function (group) {
-    const sliderEl = group.querySelector('.siema');
-
-    const siema = new Siema({
-      selector: sliderEl,
-      duration: 400,
-      easing: 'ease-out',
-      perPage: 1,
-      loop: true
-    });
-
-    const prevBtn = group.querySelector('.prev');
-    const nextBtn = group.querySelector('.next');
-
-    if (prevBtn && nextBtn) {
-      prevBtn.addEventListener('click', function () {
-        siema.prev();
-      });
-      nextBtn.addEventListener('click', function () {
-        siema.next();
-      });
-    }
-  });
-
   const overviewTexts = [
-    'Is your colleague being lazy? Are they using LLMs to write “Best regards”? Paste it below and inspect the dash damage.',
+    'Is your colleague using LLMs to write “Best regards”? Paste it below and inspect the dash damage.',
     'Did someone suddenly start writing like a polished LinkedIn ghostwriter? Check whether the em dash gave them away.',
-    'Suspiciously elegant paragraph? Too many dramatic pauses? Paste the text below and let the dash detector investigate.',
+    'Suspiciously elegant paragraph? Paste the text below and let the dash detector investigate.',
     'Before you accuse your colleague of outsourcing their personality, check the em dash count first.',
     'Has “quick update” become a suspiciously well-structured masterpiece? Paste it here and see if the em dash snitches.'
   ];
@@ -54,54 +28,53 @@ document.addEventListener('DOMContentLoaded', function () {
   const overviewEl = document.querySelector('.overview');
   const inputEl = document.getElementById('inputText');
   const resultSectionEl = document.getElementById('resultSection');
-  const resultWrapEl = document.getElementById('resultWrap');
   const resultEl = document.getElementById('resultText');
-  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
+  if (!overviewEl || !inputEl || !resultSectionEl || !resultEl) {
+    return;
+  }
+
+  const colorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
   let lastState = null;
   let currentCleanMessage = '';
   let currentSusMessage = '';
 
-  function applyPreferredScheme(event) {
-    const useDarkScheme = event.matches;
-
-    body.classList.remove('scheme-daylight', 'scheme-midnight');
-    body.classList.add(useDarkScheme ? 'scheme-midnight' : 'scheme-daylight');
-  }
-
-  function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-
-  function containsEmDash(text) {
-    return text.includes('—');
+  function pickRandom(items) {
+    return items[Math.floor(Math.random() * items.length)];
   }
 
   function debounce(fn, delay) {
-    let timerId;
+    let timerId = 0;
 
     return function () {
       const args = arguments;
-      clearTimeout(timerId);
+      window.clearTimeout(timerId);
       timerId = window.setTimeout(function () {
         fn.apply(null, args);
       }, delay);
     };
   }
 
-  function typeOnce(el, text, speed) {
-    el.textContent = '';
+  function typeOnce(element, text, speed) {
+    element.textContent = '';
     let index = 0;
 
     function tick() {
-      if (index < text.length) {
-        el.textContent += text[index];
-        index += 1;
-        window.setTimeout(tick, speed);
+      if (index >= text.length) {
+        return;
       }
+
+      element.textContent += text[index];
+      index += 1;
+      window.setTimeout(tick, speed);
     }
 
     tick();
+  }
+
+  function applyPreferredScheme(event) {
+    body.classList.toggle('scheme-midnight', event.matches);
+    body.classList.toggle('scheme-daylight', !event.matches);
   }
 
   function hideResult() {
@@ -111,18 +84,11 @@ document.addEventListener('DOMContentLoaded', function () {
     lastState = null;
   }
 
-  function showCleanResult() {
+  function showResult(state, message) {
     resultSectionEl.hidden = false;
-    resultEl.classList.remove('is-sus');
-    resultEl.classList.add('is-clean');
-    resultEl.textContent = currentCleanMessage;
-  }
-
-  function showSusResult() {
-    resultSectionEl.hidden = false;
-    resultEl.classList.remove('is-clean');
-    resultEl.classList.add('is-sus');
-    resultEl.textContent = currentSusMessage;
+    resultEl.classList.toggle('is-clean', state === 'clean');
+    resultEl.classList.toggle('is-sus', state === 'sus');
+    resultEl.textContent = message;
   }
 
   function updateResult(text) {
@@ -133,54 +99,54 @@ document.addEventListener('DOMContentLoaded', function () {
       return;
     }
 
-    const newState = containsEmDash(trimmed) ? 'sus' : 'clean';
+    const nextState = trimmed.includes('—') ? 'sus' : 'clean';
 
-    if (newState !== lastState) {
-      if (newState === 'clean') {
+    if (nextState !== lastState) {
+      if (nextState === 'clean') {
         currentCleanMessage = pickRandom(cleanTexts);
       } else {
         currentSusMessage = pickRandom(susTexts);
       }
-      lastState = newState;
+
+      lastState = nextState;
     }
 
-    if (newState === 'clean') {
-      showCleanResult();
-    } else {
-      showSusResult();
-    }
+    showResult(
+      nextState,
+      nextState === 'clean' ? currentCleanMessage : currentSusMessage
+    );
   }
 
-  const debouncedUpdate = debounce(function (value) {
+  const persistAndUpdate = debounce(function (value) {
     window.localStorage.setItem(STORAGE_KEY, value);
     updateResult(value);
   }, 250);
 
-  if (overviewEl && inputEl && resultSectionEl && resultWrapEl && resultEl) {
-    applyPreferredScheme(prefersDark);
+  applyPreferredScheme(colorSchemeMedia);
 
-    if (typeof prefersDark.addEventListener === 'function') {
-      prefersDark.addEventListener('change', applyPreferredScheme);
-    } else if (typeof prefersDark.addListener === 'function') {
-      prefersDark.addListener(applyPreferredScheme);
+  if (typeof colorSchemeMedia.addEventListener === 'function') {
+    colorSchemeMedia.addEventListener('change', applyPreferredScheme);
+  } else if (typeof colorSchemeMedia.addListener === 'function') {
+    colorSchemeMedia.addListener(applyPreferredScheme);
+  }
+
+  typeOnce(overviewEl, pickRandom(overviewTexts), 18);
+
+  const savedValue = window.localStorage.getItem(STORAGE_KEY) || '';
+  inputEl.value = savedValue;
+  updateResult(savedValue);
+
+  inputEl.addEventListener('input', function (event) {
+    persistAndUpdate(event.target.value);
+  });
+
+  inputEl.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') {
+      return;
     }
 
-    typeOnce(overviewEl, pickRandom(overviewTexts), 35);
-
-    const savedValue = window.localStorage.getItem(STORAGE_KEY) || '';
-    inputEl.value = savedValue;
-    updateResult(savedValue);
-
-    inputEl.addEventListener('input', function (event) {
-      debouncedUpdate(event.target.value);
-    });
-
-    inputEl.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') {
-        inputEl.value = '';
-        window.localStorage.removeItem(STORAGE_KEY);
-        hideResult();
-      }
-    });
-  }
+    inputEl.value = '';
+    window.localStorage.removeItem(STORAGE_KEY);
+    hideResult();
+  });
 });
