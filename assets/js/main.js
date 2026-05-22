@@ -24,17 +24,20 @@ document.addEventListener('DOMContentLoaded', function () {
   ];
 
   const STORAGE_KEY = 'emdashchecker:lastInput';
+  const THEME_KEY = 'emdashchecker:theme';
   const body = document.body;
   const overviewEl = document.querySelector('.overview');
   const inputEl = document.getElementById('inputText');
   const resultSectionEl = document.getElementById('resultSection');
   const resultEl = document.getElementById('resultText');
+  const themeToggleEl = document.getElementById('themeToggle');
 
-  if (!overviewEl || !inputEl || !resultSectionEl || !resultEl) {
+  if (!overviewEl || !inputEl || !resultSectionEl || !resultEl || !themeToggleEl) {
     return;
   }
 
   const colorSchemeMedia = window.matchMedia('(prefers-color-scheme: dark)');
+  let themePreference = window.localStorage.getItem(THEME_KEY);
   let lastState = null;
   let currentCleanMessage = '';
   let currentSusMessage = '';
@@ -72,9 +75,25 @@ document.addEventListener('DOMContentLoaded', function () {
     tick();
   }
 
-  function applyPreferredScheme(event) {
-    body.classList.toggle('scheme-midnight', event.matches);
-    body.classList.toggle('scheme-daylight', !event.matches);
+  function applyTheme(theme) {
+    const isMidnight = theme === 'midnight';
+
+    body.classList.toggle('scheme-midnight', isMidnight);
+    body.classList.toggle('scheme-daylight', !isMidnight);
+    themeToggleEl.textContent = isMidnight ? 'Light Mode' : 'Dark Mode';
+    themeToggleEl.setAttribute('aria-pressed', String(isMidnight));
+  }
+
+  function resolveTheme() {
+    if (themePreference === 'midnight' || themePreference === 'daylight') {
+      return themePreference;
+    }
+
+    return colorSchemeMedia.matches ? 'midnight' : 'daylight';
+  }
+
+  function syncTheme() {
+    applyTheme(resolveTheme());
   }
 
   function hideResult() {
@@ -122,12 +141,12 @@ document.addEventListener('DOMContentLoaded', function () {
     updateResult(value);
   }, 250);
 
-  applyPreferredScheme(colorSchemeMedia);
+  syncTheme();
 
   if (typeof colorSchemeMedia.addEventListener === 'function') {
-    colorSchemeMedia.addEventListener('change', applyPreferredScheme);
+    colorSchemeMedia.addEventListener('change', syncTheme);
   } else if (typeof colorSchemeMedia.addListener === 'function') {
-    colorSchemeMedia.addListener(applyPreferredScheme);
+    colorSchemeMedia.addListener(syncTheme);
   }
 
   typeOnce(overviewEl, pickRandom(overviewTexts), 18);
@@ -148,5 +167,11 @@ document.addEventListener('DOMContentLoaded', function () {
     inputEl.value = '';
     window.localStorage.removeItem(STORAGE_KEY);
     hideResult();
+  });
+
+  themeToggleEl.addEventListener('click', function () {
+    themePreference = body.classList.contains('scheme-midnight') ? 'daylight' : 'midnight';
+    window.localStorage.setItem(THEME_KEY, themePreference);
+    syncTheme();
   });
 });

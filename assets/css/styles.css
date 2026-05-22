@@ -118,6 +118,19 @@ div.boxed,
   align-items: center;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 16px;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: color 0.3s, background-color 0.3s, border-color 0.3s;
+}
+
 .top__right {
   display: flex;
   align-items: center;
@@ -137,7 +150,7 @@ div.boxed,
   border-radius: 999px;
   font-size: 1rem;
   text-decoration: none;
-  transition: color 0.3s;
+  transition: color 0.3s, background-color 0.3s;
 }
 
 .top__cta .arrow {
