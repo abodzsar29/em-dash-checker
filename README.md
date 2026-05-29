@@ -1,4 +1,4 @@
-# Em Dash Checker
+# Em Dash Checker - isthisanemdash.com
 
 A lightweight static web app that checks whether a piece of text contains an em dash (—).
 
